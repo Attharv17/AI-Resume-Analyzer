@@ -8,24 +8,7 @@ Skill Gap Analysis: Extracts over 60 exact skill keywords (from basic frontend t
 Job Ranking System: Employs Pandas to rank your resume globally against a CSV dataset of open roles (data/jobs.csv), presenting the top 5 positions where your skills are most desired.
 Ideal Profile Evaluation: Compares your resume against an "ideal resume" standard, evaluating section completeness and matching skills to give you exact Pros, Cons, and actionable Improvement Suggestions.
 Dynamic GUI: A professional Slate/Navy theme built with vanilla HTML/CSS/JS that features animated score rings and asynchronously updates both single-job analysis and top dataset matches.
-🚀 Getting Started
-1. Prerequisites
-Ensure you have Python 3.10+ installed on your system.
 
-2. Installation
-Navigate into the project directory and install the required dependencies:
-
-pip install -r requirements.txt
-(Dependencies include Flask, PyMuPDF, scikit-learn, and pandas)
-
-3. Running the Server
-Launch the Flask development server by running:
-
-python app.py
-Wait for the terminal to display * Running on http://127.0.0.1:5000. Keep this terminal window open.
-
-4. Open the Website
-Open your web browser and navigate to: http://127.0.0.1:5000/
 
 🖥️ How to Use
 Upload Resume: Drag & drop your PDF resume into the upload zone.

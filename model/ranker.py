@@ -59,10 +59,16 @@ def rank_jobs_for_resume(
             job_skills=job_skills,
         )
         
+        score = match_result["score"]
+        missing = match_result["missing_skills"]
+        from model.ranking_engine import generate_recommendation_reason
+        reason = generate_recommendation_reason(score, missing)
+        
         ranked_jobs.append({
             "title": title,
-            "score": match_result["score"],
-            "missing_skills": match_result["missing_skills"]
+            "score": score,
+            "missing_skills": missing,
+            "recommendation_reason": reason
         })
 
     # Sort descending by score

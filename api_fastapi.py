@@ -221,9 +221,8 @@ async def match_resume(
             status_code=500, detail=f"Could not read jobs: {exc}"
         ) from exc
 
-    # Use the pre-loaded model from the registry (no disk I/O)
-    model = registry.score_model
-    ranked = rank_jobs(resume_data, jobs, model, top_n=min(max(top_n, 1), 50))
+    # Rank jobs (semantic + experience) without ML model dependency
+    ranked = rank_jobs(resume_data, jobs, top_n=min(max(top_n, 1), 50))
 
     if not include_debug:
         for row in ranked:

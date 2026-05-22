@@ -10,9 +10,9 @@
   ],
   "experience": 4,
   "education": "B.Tech in Computer Science, XYZ University (2022 - 2026)",
-  "raw_text": "John Doe\nEmail: johndoe@email.com\nPhone: +91 9876543210\nSummary\nAspiring Data Scientist with strong skills in Python, Machine Learning, and Data Analysis.\nSkills\nPython, Machine Learning, Data Analysis, SQL, Pandas, NumPy\nEducation\nB.Tech in Computer Science, XYZ University (2022 - 2026)\nProjects\n1. Resume Analyzer using NLP\n2. Stock Price Prediction using LSTM\nExperience\nIntern - Data Analyst at ABC Company (2025)",
+  "raw_text": "John Doe\nEmail\nPhone: +91 9876543210\nSummary\nAspiring Data Scientist with strong skills in Python, Machine Learning, and Data Analysis.\nSkills\nPython, Machine Learning, Data Analysis, SQL, Pandas, NumPy\nEducation\nB.Tech in Computer Science, XYZ University (2022 - 2026)\nProjects\n1. Resume Analyzer using NLP\n2. Stock Price Prediction using LSTM\nExperience\nIntern - Data Analyst at ABC Company (2025)",
   "meta": {
     "source_pdf": "D:\\Coding\\AI Resume Analyzer\\sample_resume.pdf",
-    "text_length": 418
+    "text_length": 399
   }
 }

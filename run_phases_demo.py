@@ -27,8 +27,8 @@ def main() -> None:
 
     resume = json.loads((root / "resume_data.json").read_text(encoding="utf-8"))
     jobs = json.loads((root / "jobs_data.json").read_text(encoding="utf-8"))
-    model = ensure_default_model(root / "model_store")
-    top = rank_jobs(resume, jobs, model, top_n=5)
+    ensure_default_model(root / "models")
+    top = rank_jobs(resume, jobs, top_n=5)
 
     print("Top 5 jobs:")
     for row in top:

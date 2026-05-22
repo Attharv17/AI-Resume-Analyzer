@@ -252,7 +252,7 @@ def analyze():
     result["resume_skills_found"] = resume_skills
 
     # Load ideal resume and compare
-    ideal_resume_path = os.path.join(BASE_DIR, "model", "ideal_resume.txt")
+    ideal_resume_path = os.path.join(BASE_DIR, "models", "ideal_resume.txt")
     try:
         with open(ideal_resume_path, "r", encoding="utf-8") as f:
             ideal_text = f.read()

@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+node_modules/
+dist/
+model_store/
+uploads/
+*.joblib
+debug_analyze.json
+.DS_Store
+AI-Resume-Analyzer/

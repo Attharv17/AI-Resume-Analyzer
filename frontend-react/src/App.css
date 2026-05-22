@@ -1,0 +1,93 @@
+:root {
+  color-scheme: dark;
+  font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+  background: #0b1020;
+  color: #e8eefc;
+}
+
+.page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 28px 18px 60px;
+}
+
+.hero h1 {
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+}
+
+.hero p {
+  margin: 0;
+  opacity: 0.85;
+}
+
+.card {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+button {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #1c2b55;
+  color: #e8eefc;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pre {
+  overflow: auto;
+  max-height: 420px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.err {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(255, 80, 80, 0.12);
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  white-space: pre-wrap;
+}
+
+.list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.title {
+  margin-bottom: 4px;
+}
+
+.sub {
+  opacity: 0.85;
+  margin-bottom: 10px;
+}
+
+.foot {
+  margin-top: 18px;
+  opacity: 0.75;
+  font-size: 13px;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}

@@ -1,0 +1,81 @@
+[
+  {
+    "title": "Software Engineer",
+    "skills_required": [
+      "agile",
+      "aws",
+      "java",
+      "python",
+      "sql"
+    ],
+    "experience_required": 0,
+    "description": "We are looking for a Software Engineer to develop scalable backend systems. Experience with Python, Java, SQL, and AWS is required. You should be familiar with agile methodologies."
+  },
+  {
+    "title": "Data Scientist",
+    "skills_required": [
+      "deep learning",
+      "machine learning",
+      "nlp",
+      "python",
+      "pytorch",
+      "sql",
+      "tensorflow"
+    ],
+    "experience_required": 0,
+    "description": "Seeking a Data Scientist to build predictive models. Must have strong skills in Python, machine learning, deep learning, NLP, and SQL. Experience with TensorFlow or PyTorch is a big plus."
+  },
+  {
+    "title": "Frontend Developer",
+    "skills_required": [
+      "css",
+      "html",
+      "javascript",
+      "next.js",
+      "react"
+    ],
+    "experience_required": 0,
+    "description": "We need a creative Frontend Developer proficient in React, JavaScript, HTML, and CSS. Knowledge of modern design principles and framework like Next.js is highly desirable."
+  },
+  {
+    "title": "DevOps Engineer",
+    "skills_required": [
+      "aws",
+      "bash",
+      "ci/cd",
+      "docker",
+      "kubernetes",
+      "linux",
+      "python"
+    ],
+    "experience_required": 0,
+    "description": "Looking for a DevOps Engineer to manage CI/CD pipelines and cloud infrastructure. Must know Docker, Kubernetes, AWS, and Linux. Scripting in Python or Bash is required."
+  },
+  {
+    "title": "Product Manager",
+    "skills_required": [
+      "agile",
+      "communication",
+      "jira",
+      "leadership",
+      "problem solving",
+      "scrum"
+    ],
+    "experience_required": 0,
+    "description": "Seeking a Product Manager to lead software projects. Strong communication, leadership, and problem-solving skills are essential. Familiarity with Agile, Scrum, and Jira."
+  },
+  {
+    "title": "Machine Learning Engineer",
+    "skills_required": [
+      "c",
+      "c++",
+      "computer vision",
+      "keras",
+      "model deployment",
+      "python",
+      "tensorflow"
+    ],
+    "experience_required": 0,
+    "description": "Join our team as an ML Engineer. Requires expertise in Python, C++, TensorFlow, Keras, and model deployment. Focus on computer vision applications."
+  }
+]

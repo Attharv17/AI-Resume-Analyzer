@@ -12,11 +12,18 @@ POST /analyze             – Accepts a PDF resume + job description;
 POST /rank_jobs           – Ranks jobs.csv entries against an uploaded resume.
 POST /extract_resume_skills – Returns comma-separated skills from a PDF resume.
 
-Parsing pipeline (new)
-----------------------
+Parsing pipeline
+----------------
   PDF → model.parser.extract_text_from_pdf   (block-sorted, multi-column aware)
       → model.preprocessing.clean_text        (noise removal, dedup)
       → model.skill_extractor.extract_skills  (250+ vocab, alias normalisation)
+
+Scoring pipeline (updated)
+--------------------------
+  resume_text + job_text
+      → model.embedding_service   (all-MiniLM-L6-v2 embeddings)
+      → model.similarity_engine   (semantic cosine + skill matching)
+      → model.matcher.compute_match  (blended score + confidence)
 """
 
 import os
@@ -96,9 +103,14 @@ def analyze():
 
     Returns JSON:
         {
-            "score":          <int 0-100>,   # TF-IDF cosine similarity
-            "matched_skills": [<str>, ...],  # skills in both resume & JD
-            "missing_skills": [<str>, ...]   # JD skills absent from resume
+            "score":          <int 0-100>,    # blended semantic ATS score
+            "confidence":     <float 0-1>,    # mean skill-match confidence
+            "matched_skills": [<str>, ...],   # semantically matched skills
+            "missing_skills": [<str>, ...],   # JD skills absent from resume
+            "scoring_method": <str>,          # "semantic" | "tfidf_fallback"
+            "pros":           [<str>, ...],
+            "cons":           [<str>, ...],
+            "suggestion":     <str>
         }
 
     Error responses follow the shape:
@@ -198,7 +210,9 @@ def analyze():
             "job_description_aug": job_description,
             "resume_skills": resume_skills,
             "job_skills": job_skills,
-            "result": result
+            "scoring_method": result.get("scoring_method", "unknown"),
+            "confidence": result.get("confidence", None),
+            "result": result,
         }, f, indent=2)
 
     return jsonify(result), 200

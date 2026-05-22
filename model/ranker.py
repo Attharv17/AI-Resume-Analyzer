@@ -9,7 +9,7 @@ and returns the top ranked jobs.
 import pandas as pd
 from typing import Dict, Any, List
 
-from model.extractor import extract_skills
+from model.skill_extractor import extract_skills
 from model.matcher import compute_match
 
 def rank_jobs_for_resume(

@@ -53,6 +53,22 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# ---------------------------------------------------------------------------
+# ML Model Warm-up
+# ---------------------------------------------------------------------------
+# Warm up ML models at startup (one-time per worker) so the first request
+# does not suffer the 3-4 second load penalty.
+try:
+    from model.ml_scorer import warm_up
+    from model.embedding_service import get_model
+    
+    warm_up(os.path.join(BASE_DIR, "model_store"))
+    get_model()  # Widen sentence-transformers model
+except Exception as e:
+    import logging
+    logging.warning(f"Model warm-up failed or partially failed: {e}")
+
+
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -44,21 +44,33 @@ def experience_match_score(resume_years: int, required_years: int) -> float:
     return max(0.0, min(1.0, r / float(req)))
 
 
+
+# Reusable vectorizer — constructed once, re-fit on each pair of documents.
+# Avoids repeated object creation and stop-word list compilation overhead.
+_TFIDF_VECTORIZER = TfidfVectorizer(
+    stop_words="english",
+    ngram_range=(1, 2),
+    min_df=1,
+    sublinear_tf=True,
+)
+
 def text_similarity_score(resume_blob: str, job_blob: str) -> float:
-    """Cosine similarity of TF-IDF vectors (0–1)."""
+    """Cosine similarity of TF-IDF vectors (0–1).
+
+    Uses a module-level vectorizer instance to avoid re-instantiating the
+    stop-word list and vocabulary on every call.
+    """
     a = (resume_blob or "").strip()
     b = (job_blob or "").strip()
     if not a or not b:
         return 0.0
-    vectorizer = TfidfVectorizer(
-        stop_words="english",
-        ngram_range=(1, 2),
-        min_df=1,
-        sublinear_tf=True,
-    )
-    m = vectorizer.fit_transform([a, b])
-    sim = cosine_similarity(m[0:1], m[1:2])[0][0]
-    return float(max(0.0, min(1.0, sim)))
+    try:
+        m = _TFIDF_VECTORIZER.fit_transform([a, b])
+        sim = cosine_similarity(m[0:1], m[1:2])[0][0]
+        return float(max(0.0, min(1.0, sim)))
+    except Exception:
+        return 0.0
+
 
 
 def build_feature_vector(

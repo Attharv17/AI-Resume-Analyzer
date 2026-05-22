@@ -21,7 +21,7 @@ from typing import Any, Dict, List
 
 import requests
 
-from model.job_requirements import extract_job_requirements
+from utils.job_requirements import extract_job_requirements
 
 REMOTE_OK_URL = "https://remoteok.com/api"
 DEFAULT_OUT = "jobs_data.json"

@@ -34,11 +34,11 @@ import logging
 from flask import Flask, request, jsonify, send_from_directory, g
 from werkzeug.utils import secure_filename
 
-from model.parser import extract_text_from_pdf
-from model.skill_extractor import extract_skills, detect_sections
-from model.matcher import compute_match
-from model.ranker import rank_jobs_for_resume
-from model.comparator import compare_resumes
+from utils.parser import extract_text_from_pdf
+from utils.skill_extractor import extract_skills, detect_sections
+from services.inference_pipeline import compute_match
+from services.ranking_service import rank_jobs_for_resume
+from services.recommendation_engine import compare_resumes
 
 # ---------------------------------------------------------------------------
 # Logging Configuration
@@ -92,11 +92,11 @@ def log_response(response):
 # ML Model Warm-up
 # ---------------------------------------------------------------------------
 try:
-    from model.ml_scorer import warm_up
-    from model.embedding_service import get_model
+    from models.ml_scorer import warm_up
+    from services.model_service import get_model
     
     logger.info("Warming up ML models...")
-    warm_up(os.path.join(BASE_DIR, "model_store"))
+    warm_up(os.path.join(BASE_DIR, "models"))
     get_model()  
     logger.info("ML models warm-up complete.")
 except Exception as e:
@@ -269,7 +269,7 @@ def analyze():
         result["suggestion"] = ""
 
     # Add the recommendation_reason missing field for standardized output
-    from model.ranking_engine import generate_recommendation_reason
+    from services.ranking_service import generate_recommendation_reason
     result["recommendation_reason"] = generate_recommendation_reason(result["score"], result["missing_skills"])
 
     return jsonify(result), 200

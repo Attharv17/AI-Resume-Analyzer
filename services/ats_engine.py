@@ -39,7 +39,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from model.embedding_service import encode, encode_single, expand_abbreviations
+from services.model_service import encode, encode_single, expand_abbreviations
 
 logger = logging.getLogger(__name__)
 

@@ -217,7 +217,7 @@ def extract_text_from_pdf(file_path: str) -> str:
 
     # Delegate noise removal to the preprocessing pipeline
     try:
-        from model.preprocessing import clean_text  # noqa: PLC0415
+        from utils.preprocessing import clean_text  # noqa: PLC0415
         return clean_text(raw)
     except ImportError:
         # Graceful degradation if preprocessing module is not yet present

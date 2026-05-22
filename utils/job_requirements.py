@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict
 
-from model.extractor import extract_skills
+from utils.skill_extractor import extract_skills
 
 # Prefer explicit job-posting phrasing first
 _MIN_YEARS_RE = re.compile(

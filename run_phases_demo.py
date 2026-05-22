@@ -11,9 +11,9 @@ import json
 from pathlib import Path
 
 from collect_jobs import collect_jobs
-from model.ml_scorer import ensure_default_model
-from model.ranking_engine import rank_jobs
-from model.resume_structured import parse_resume_to_json_file
+from models.ml_scorer import ensure_default_model
+from services.ranking_service import rank_jobs
+from utils.resume_structured import parse_resume_to_json_file
 
 
 def main() -> None:

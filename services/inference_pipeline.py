@@ -26,7 +26,7 @@ Response shape
 
 from typing import Dict, Any, List
 
-from model.similarity_engine import compute_semantic_match
+from services.ats_engine import compute_semantic_match
 
 
 # ---------------------------------------------------------------------------

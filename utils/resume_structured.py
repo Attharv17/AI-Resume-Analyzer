@@ -21,8 +21,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from model.extractor import extract_skills
-from model.parser import extract_text_from_pdf
+from utils.skill_extractor import extract_skills
+from utils.parser import extract_text_from_pdf
 
 # ---------------------------------------------------------------------------
 # Optional spaCy

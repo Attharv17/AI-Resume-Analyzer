@@ -41,14 +41,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from collect_jobs import collect_jobs
-from model.ml_scorer import (
+from models.ml_scorer import (
     ModelRegistry,
     ensure_default_model,
     get_registry,
     warm_up,
 )
-from model.ranking_engine import rank_jobs
-from model.resume_structured import parse_resume_pdf
+from services.ranking_service import rank_jobs
+from utils.resume_structured import parse_resume_pdf
 
 # ---------------------------------------------------------------------------
 # Logging Configuration
@@ -81,7 +81,7 @@ RESUME_SAMPLE_OUT = BASE_DIR / "resume_data.json"
 async def lifespan(app: FastAPI):
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     logger.info("Warming up ML models...")
-    warm_up(BASE_DIR / "model_store")
+    warm_up(BASE_DIR / "models")
     logger.info("ML models warm-up complete.")
     yield  
 

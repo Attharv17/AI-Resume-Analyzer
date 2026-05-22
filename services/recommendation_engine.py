@@ -1,27 +1,38 @@
 """
 comparator.py
 -------------
-Responsible for comparing a user's resume against an ideal resume to generate pros, cons, and improvement suggestions.
+Compares a user's resume against an ideal profile to generate pros, cons,
+and improvement suggestions.
+
+Now accepts an optional ``job_skills`` argument so comparisons can be
+made against the actual job description rather than the static ideal_resume.txt.
 """
 
-from model.extractor import extract_skills
+from utils.skill_extractor import extract_skills, detect_sections
 
 def get_sections(text: str) -> dict:
     """Detect presence of key sections in the resume text."""
-    text_lower = text.lower()
-    return {
-        "summary": "summary" in text_lower or "profile" in text_lower or "objective" in text_lower,
-        "skills": "skills" in text_lower or "technologies" in text_lower,
-        "projects": "projects" in text_lower or "portfolio" in text_lower,
-        "experience": "experience" in text_lower or "employment" in text_lower or "history" in text_lower or "work" in text_lower
-    }
+    detected = detect_sections(text)
+    known = {"summary", "skills", "projects", "experience", "certifications", "education"}
+    return {k: (k in detected) for k in known}
 
-def compare_resumes(user_text: str, ideal_text: str, user_skills: list) -> dict:
+def compare_resumes(
+    user_text: str,
+    ideal_text: str,
+    user_skills: list,
+    job_skills: list | None = None,
+) -> dict:
     """
-    Compare user resume against ideal resume.
+    Compare user resume against an ideal profile.
+
+    If ``job_skills`` is provided, pros/cons are generated relative to the
+    actual job description skills instead of the static ideal_resume.txt.
+    This makes the feedback far more relevant to what the user applied for.
+
     Returns a dictionary with pros, cons, and a score improvement suggestion.
     """
-    ideal_skills = extract_skills(ideal_text)
+    # Use job_skills as the reference if provided, else fall back to ideal_resume.txt
+    ideal_skills = job_skills if job_skills else extract_skills(ideal_text)
     
     user_sections = get_sections(user_text)
     ideal_sections = get_sections(ideal_text)

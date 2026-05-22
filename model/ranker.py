@@ -12,6 +12,35 @@ from typing import Dict, Any, List
 from model.skill_extractor import extract_skills
 from model.matcher import compute_match
 
+import functools
+
+@functools.lru_cache(maxsize=1)
+def _load_and_parse_jobs(jobs_csv_path: str) -> List[Dict[str, Any]]:
+    try:
+        df = pd.read_csv(jobs_csv_path)
+    except Exception as e:
+        raise RuntimeError(f"Could not read jobs dataset: {e}")
+
+    required_cols = {"title", "description", "skills", "location"}
+    if not required_cols.issubset(df.columns):
+        raise ValueError(f"jobs.csv missing required columns. Needed: {required_cols}")
+
+    parsed_jobs = []
+    for _, row in df.iterrows():
+        title = str(row["title"])
+        description = str(row["description"])
+        csv_skills = str(row["skills"])
+        full_job_text = description + " " + csv_skills
+        job_skills = extract_skills(full_job_text)
+        
+        parsed_jobs.append({
+            "title": title,
+            "full_job_text": full_job_text,
+            "job_skills": job_skills
+        })
+    return parsed_jobs
+
+
 def rank_jobs_for_resume(
     resume_text: str,
     resume_skills: List[str],
@@ -28,35 +57,16 @@ def rank_jobs_for_resume(
     Returns:
         Dict returning top 5 jobs in the required structure.
     """
-    try:
-        df = pd.read_csv(jobs_csv_path)
-    except Exception as e:
-        raise RuntimeError(f"Could not read jobs dataset: {e}")
-
-    # Check required columns
-    required_cols = {"title", "description", "skills", "location"}
-    if not required_cols.issubset(df.columns):
-        raise ValueError(f"jobs.csv missing required columns. Needed: {required_cols}")
+    parsed_jobs = _load_and_parse_jobs(jobs_csv_path)
 
     ranked_jobs = []
 
-    for _, row in df.iterrows():
-        title = str(row["title"])
-        description = str(row["description"])
-        csv_skills = str(row["skills"])
-        
-        # Combine description and csv skills for thorough skill extraction and TF-IDF
-        full_job_text = description + " " + csv_skills
-        
-        # Extract skills for the job
-        job_skills = extract_skills(full_job_text)
-        
-        # Compute match score against resume
+    for job in parsed_jobs:
         match_result = compute_match(
             resume_text=resume_text,
-            job_text=full_job_text,
+            job_text=job["full_job_text"],
             resume_skills=resume_skills,
-            job_skills=job_skills,
+            job_skills=job["job_skills"],
         )
         
         score = match_result["score"]
@@ -65,10 +75,13 @@ def rank_jobs_for_resume(
         reason = generate_recommendation_reason(score, missing)
         
         ranked_jobs.append({
-            "title": title,
+            "title": job["title"],
             "score": score,
+            "confidence": match_result.get("confidence", 0.0),
+            "matched_skills": match_result.get("matched_skills", []),
             "missing_skills": missing,
-            "recommendation_reason": reason
+            "recommendation_reason": reason,
+            "scoring_method": match_result.get("scoring_method", "semantic"),
         })
 
     # Sort descending by score

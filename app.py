@@ -28,7 +28,10 @@ Scoring pipeline (updated)
 
 import os
 import uuid
-from flask import Flask, request, jsonify, send_from_directory
+import hashlib
+import time
+import logging
+from flask import Flask, request, jsonify, send_from_directory, g
 from werkzeug.utils import secure_filename
 
 from model.parser import extract_text_from_pdf
@@ -36,6 +39,25 @@ from model.skill_extractor import extract_skills, detect_sections
 from model.matcher import compute_match
 from model.ranker import rank_jobs_for_resume
 from model.comparator import compare_resumes
+
+# ---------------------------------------------------------------------------
+# Logging Configuration
+# ---------------------------------------------------------------------------
+class RequestIdFilter(logging.Filter):
+    def filter(self, record):
+        from flask import has_request_context
+        record.request_id = g.request_id if has_request_context() and hasattr(g, 'request_id') else 'SYSTEM'
+        return True
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - [%(levelname)s] - [req:%(request_id)s] - %(name)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+logger.addFilter(RequestIdFilter())
+# Ensure other loggers (like similarity_engine) also get the filter if possible, 
+# but setting it on root is safer.
+logging.getLogger().addFilter(RequestIdFilter())
 
 # ---------------------------------------------------------------------------
 # App configuration
@@ -53,47 +75,70 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+@app.before_request
+def assign_request_id():
+    g.request_id = str(uuid.uuid4())[:8]
+    g.start_time = time.time()
+    logger.info(f"Started {request.method} {request.path}")
+
+@app.after_request
+def log_response(response):
+    if hasattr(g, 'start_time'):
+        elapsed = (time.time() - g.start_time) * 1000
+        logger.info(f"Completed {request.method} {request.path} - Status: {response.status_code} - {elapsed:.2f}ms")
+    return response
+
 # ---------------------------------------------------------------------------
 # ML Model Warm-up
 # ---------------------------------------------------------------------------
-# Warm up ML models at startup (one-time per worker) so the first request
-# does not suffer the 3-4 second load penalty.
 try:
     from model.ml_scorer import warm_up
     from model.embedding_service import get_model
     
+    logger.info("Warming up ML models...")
     warm_up(os.path.join(BASE_DIR, "model_store"))
-    get_model()  # Widen sentence-transformers model
+    get_model()  
+    logger.info("ML models warm-up complete.")
 except Exception as e:
-    import logging
-    logging.warning(f"Model warm-up failed or partially failed: {e}")
-
-
+    logger.warning(f"Model warm-up failed or partially failed: {e}")
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 def _is_allowed_file(filename: str) -> bool:
-    """Return True if the uploaded file has a .pdf extension."""
     return (
         "." in filename
         and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
     )
 
+# In-memory LRU cache for PDF texts to eliminate duplicate extraction 
+import functools
+@functools.lru_cache(maxsize=32)
+def _extract_from_hash(file_hash: str, save_path: str) -> str:
+    start_time = time.time()
+    text = extract_text_from_pdf(save_path)
+    elapsed = (time.time() - start_time) * 1000
+    logger.info(f"PDF parsed successfully. Characters: {len(text)}. Time: {elapsed:.2f}ms")
+    return text
+
 def _process_uploaded_pdf(resume_file) -> str:
-    """
-    Save the uploaded PDF securely and return cleaned, parsed text.
-
-    Uses the enhanced parser (block-sorted PyMuPDF + pdfplumber fallback)
-    followed by the preprocessing noise-removal pipeline.
-    """
-    safe_name = f"{uuid.uuid4().hex}_{secure_filename(resume_file.filename)}"
+    content = resume_file.read()
+    file_hash = hashlib.md5(content).hexdigest()
+    
+    # Save the file only once per hash to save disk IO if possible, 
+    # but for simplicity we'll just use the hash for the memory cache
+    safe_name = f"{file_hash}_{secure_filename(resume_file.filename)}"
     save_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
-    resume_file.save(save_path)
-    # extract_text_from_pdf now handles multi-column layout and noise removal
-    return extract_text_from_pdf(save_path)
-
+    
+    if not os.path.exists(save_path):
+        with open(save_path, "wb") as f:
+            f.write(content)
+            
+    # Reset file pointer if needed by callers
+    resume_file.seek(0)
+    
+    logger.debug(f"Processing PDF with hash: {file_hash}")
+    return _extract_from_hash(file_hash, save_path)
 
 # ---------------------------------------------------------------------------
 # Routes
@@ -155,48 +200,53 @@ def analyze():
         return jsonify({"error": "job_description field is required and "
                                  "must not be empty."}), 400
 
+    # ------------------------------------------------------------------
     # 4. Parse PDF → extract text
     # ------------------------------------------------------------------
     try:
         resume_text = _process_uploaded_pdf(resume_file)
     except Exception as exc:
+        logger.error(f"Failed to parse PDF: {exc}")
         return jsonify({"error": f"Failed to parse PDF: {exc}"}), 422
 
     # ------------------------------------------------------------------
     # 5. Extract skills (for gap analysis)
     # ------------------------------------------------------------------
-    # Use section-aware extraction: skills found in the Skills section
-    # are surfaced first; the full-text scan catches the rest.
+    start_time = time.time()
     resume_sections = detect_sections(resume_text)
-    resume_skills = extract_skills(resume_text)
     
-    # Optional enhancement: if user typed a job title like "Data Scientist" in the description,
-    # augment it with our database so we can accurately output missing skills!
+    # We can use the LRU cache directly on extract_skills if we want, 
+    # but extracting it directly is fine as we'll just log it.
+    resume_skills = extract_skills(resume_text)
+    logger.info(f"Extracted {len(resume_skills)} skills from resume in {(time.time() - start_time)*1000:.2f}ms")
+    
     import pandas as pd
     try:
         df = pd.read_csv(DATA_CSV_PATH)
         for _, row in df.iterrows():
             title = str(row["title"]).lower()
             if title in job_description.lower():
-                # Augment the text for tf-idf and extraction exactly like ranker.py
                 job_description += " " + str(row["description"]) + " " + str(row["skills"])
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(f"Failed to augment JD with dataset: {exc}")
 
+    start_time = time.time()
     job_skills = extract_skills(job_description)
+    logger.info(f"Extracted {len(job_skills)} skills from job description in {(time.time() - start_time)*1000:.2f}ms")
 
     # ------------------------------------------------------------------
-    # 6. Compute match:
-    #    • TF-IDF cosine similarity on full texts → score
-    #    • Set intersection / difference         → matched / missing skills
+    # 6. Compute match
     # ------------------------------------------------------------------
-    # ------------------------------------------------------------------
+    start_time = time.time()
     result = compute_match(
         resume_text=resume_text,
         job_text=job_description,
         resume_skills=resume_skills,
         job_skills=job_skills,
     )
+    logger.info(f"Match computed in {(time.time() - start_time)*1000:.2f}ms. Score: {result['score']}%")
+    logger.info(f"Semantic info - Method: {result.get('scoring_method')}, Confidence: {result.get('confidence', 0):.2f}")
+    logger.info(f"Skill overlap - Matched: {len(result.get('matched_skills', []))}, Missing: {len(result.get('missing_skills', []))}")
 
     # Attach the full resume skill list as extra diagnostic context
     result["resume_skills_found"] = resume_skills
@@ -206,8 +256,6 @@ def analyze():
     try:
         with open(ideal_resume_path, "r", encoding="utf-8") as f:
             ideal_text = f.read()
-        # Pass job_skills so pros/cons reflect the actual JD, not always
-        # the hardcoded Data Science ideal profile.
         comparison = compare_resumes(
             resume_text, ideal_text, resume_skills, job_skills=job_skills
         )
@@ -215,21 +263,14 @@ def analyze():
         result["cons"] = comparison["cons"]
         result["suggestion"] = comparison["suggestion"]
     except Exception as e:
+        logger.error(f"Failed to compare with ideal resume: {e}")
         result["pros"] = []
         result["cons"] = ["Could not load ideal resume for comparison."]
         result["suggestion"] = ""
 
-    import json
-    with open(os.path.join(BASE_DIR, "debug_analyze.json"), "w") as f:
-        json.dump({
-            "job_description_raw": request.form.get("job_description", "").strip(),
-            "job_description_aug": job_description,
-            "resume_skills": resume_skills,
-            "job_skills": job_skills,
-            "scoring_method": result.get("scoring_method", "unknown"),
-            "confidence": result.get("confidence", None),
-            "result": result,
-        }, f, indent=2)
+    # Add the recommendation_reason missing field for standardized output
+    from model.ranking_engine import generate_recommendation_reason
+    result["recommendation_reason"] = generate_recommendation_reason(result["score"], result["missing_skills"])
 
     return jsonify(result), 200
 

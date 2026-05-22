@@ -84,8 +84,11 @@ def rank_jobs(
                 "experience_required": job_years,
                 "description": desc,
                 "score": final_score,
+                "confidence": match_result.get("confidence", 0.0),
+                "matched_skills": match_result.get("matched_skills", []),
                 "missing_skills": missing,
                 "recommendation_reason": reason,
+                "scoring_method": match_result.get("scoring_method", "semantic"),
             }
         )
 

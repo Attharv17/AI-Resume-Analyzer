@@ -29,11 +29,14 @@ from __future__ import annotations
 
 import json
 import uuid
+import time
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any, Dict, List
+import contextvars
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -47,11 +50,28 @@ from model.ml_scorer import (
 from model.ranking_engine import rank_jobs
 from model.resume_structured import parse_resume_pdf
 
+# ---------------------------------------------------------------------------
+# Logging Configuration
+# ---------------------------------------------------------------------------
+request_id_var = contextvars.ContextVar("request_id", default="SYSTEM")
+
+class FastApiRequestIdFilter(logging.Filter):
+    def filter(self, record):
+        record.request_id = request_id_var.get()
+        return True
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - [%(levelname)s] - [req:%(request_id)s] - %(name)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+logger.addFilter(FastApiRequestIdFilter())
+logging.getLogger().addFilter(FastApiRequestIdFilter())
+
 BASE_DIR  = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 JOBS_CACHE = BASE_DIR / "jobs_data.json"
 RESUME_SAMPLE_OUT = BASE_DIR / "resume_data.json"
-
 
 # ---------------------------------------------------------------------------
 # Lifespan — load all models at startup, once
@@ -59,22 +79,11 @@ RESUME_SAMPLE_OUT = BASE_DIR / "resume_data.json"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Load ML models before the first request is handled.
-
-    Using ``lifespan`` (instead of the deprecated ``@app.on_event``) ensures
-    models are resident in the ModelRegistry singleton for the entire process
-    lifetime with no per-request I/O.
-    """
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Warm up: loads score_model.joblib + legacy pkl artefacts (if present)
+    logger.info("Warming up ML models...")
     warm_up(BASE_DIR / "model_store")
-
-    yield  # Application runs here
-
-    # (Optional) cleanup on shutdown goes here
-
+    logger.info("ML models warm-up complete.")
+    yield  
 
 # ---------------------------------------------------------------------------
 # FastAPI app
@@ -86,6 +95,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.middleware("http")
+async def add_process_time_header_and_trace(request: Request, call_next):
+    req_id = str(uuid.uuid4())[:8]
+    request_id_var.set(req_id)
+    start_time = time.time()
+    
+    logger.info(f"Started {request.method} {request.url.path}")
+    response = await call_next(request)
+    
+    process_time = (time.time() - start_time) * 1000
+    logger.info(f"Completed {request.method} {request.url.path} - Status: {response.status_code} - {process_time:.2f}ms")
+    response.headers["X-Process-Time"] = str(process_time)
+    response.headers["X-Request-ID"] = req_id
+    return response
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -93,7 +117,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # ---------------------------------------------------------------------------
 # Dependency — returns the singleton registry (no I/O, just a dict lookup)
@@ -202,9 +225,13 @@ async def match_resume(
     path = UPLOAD_DIR / safe
     path.write_bytes(await resume.read())
 
+    logger.info(f"Received match request for {resume.filename}")
     try:
+        start_time = time.time()
         resume_data = parse_resume_pdf(path)
+        logger.info(f"Resume parsed in {(time.time() - start_time)*1000:.2f}ms")
     except Exception as exc:
+        logger.error(f"Failed to parse PDF: {exc}")
         raise HTTPException(
             status_code=422, detail=f"Failed to parse PDF: {exc}"
         ) from exc
@@ -222,7 +249,9 @@ async def match_resume(
         ) from exc
 
     # Rank jobs (semantic + experience) without ML model dependency
+    start_time = time.time()
     ranked = rank_jobs(resume_data, jobs, top_n=min(max(top_n, 1), 50))
+    logger.info(f"Ranked {len(jobs)} jobs in {(time.time() - start_time)*1000:.2f}ms. Top score: {ranked[0]['score'] if ranked else 0}%")
 
     if not include_debug:
         for row in ranked:

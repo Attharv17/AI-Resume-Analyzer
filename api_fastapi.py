@@ -65,8 +65,8 @@ logging.basicConfig(
     format='%(asctime)s - [%(levelname)s] - [req:%(request_id)s] - %(name)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-logger.addFilter(FastApiRequestIdFilter())
-logging.getLogger().addFilter(FastApiRequestIdFilter())
+for handler in logging.getLogger().handlers:
+    handler.addFilter(FastApiRequestIdFilter())
 
 BASE_DIR  = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"

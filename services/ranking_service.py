@@ -83,11 +83,17 @@ def rank_jobs(
             resume_skills=resume_skills,
             job_skills=job_skills,
         )
-        
+
+        # Apply experience as a gentle scaling multiplier (0.80–1.00×) so that
+        # under-qualified candidates lose points without dominating the score.
+        # We deliberately do NOT use the RandomForestRegressor here — its
+        # tree-averaging behaviour compresses all predictions toward the mean.
         em = experience_match_score(resume_years, job_years)
-        semantic_score = match_result["score"]
-        final_score = int(round((semantic_score * 0.85) + (em * 100 * 0.15)))
-        final_score = min(max(final_score, 0), 100)
+        experience_scale = 0.80 + 0.20 * em  # range: 0.80 (0 yrs) → 1.00 (meets req)
+
+        raw_engine_score = match_result["score"]
+        final_score = int(round(min(max(raw_engine_score * experience_scale, 0), 100)))
+
         missing = match_result["missing_skills"]
         reason = generate_recommendation_reason(final_score, missing)
 
@@ -159,11 +165,13 @@ def rank_jobs_for_resume(
             resume_skills=resume_skills,
             job_skills=job["job_skills"],
         )
-        
-        score = match_result["score"]
+
+        # Use engine score directly — no ML model override.
+        # CSV jobs may not have experience_required; default experience_scale=1.0.
+        score = min(max(match_result["score"], 0), 100)
         missing = match_result["missing_skills"]
         reason = generate_recommendation_reason(score, missing)
-        
+
         ranked_jobs.append({
             "title": job["title"],
             "score": score,

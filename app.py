@@ -54,10 +54,8 @@ logging.basicConfig(
     format='%(asctime)s - [%(levelname)s] - [req:%(request_id)s] - %(name)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-logger.addFilter(RequestIdFilter())
-# Ensure other loggers (like similarity_engine) also get the filter if possible, 
-# but setting it on root is safer.
-logging.getLogger().addFilter(RequestIdFilter())
+for handler in logging.getLogger().handlers:
+    handler.addFilter(RequestIdFilter())
 
 # ---------------------------------------------------------------------------
 # App configuration
@@ -99,6 +97,11 @@ try:
     warm_up(os.path.join(BASE_DIR, "models"))
     get_model()  
     logger.info("ML models warm-up complete.")
+    
+    print("\n" + "="*55)
+    print("🚀 AI Resume Analyzer is successfully running!")
+    print("👉 DIRECT LOCAL LINK: http://127.0.0.1:5000")
+    print("="*55 + "\n")
 except Exception as e:
     logger.warning(f"Model warm-up failed or partially failed: {e}")
 

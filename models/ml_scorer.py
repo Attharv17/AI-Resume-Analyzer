@@ -58,8 +58,8 @@ FEATURE_NAMES = ["skill_match", "experience_match", "similarity_score"]
 # ---------------------------------------------------------------------------
 
 _BASE_DIR   = Path(__file__).resolve().parent.parent
-_MODEL_DIR  = _BASE_DIR / "model_store"
-_LEGACY_DIR = _BASE_DIR / "model"
+_MODEL_DIR  = _BASE_DIR / "models"
+_LEGACY_DIR = _BASE_DIR / "models"
 
 _DEFAULT_SCORE_MODEL_PATH    = _MODEL_DIR  / "score_model.joblib"
 _LEGACY_RESUME_MODEL_PATH    = _LEGACY_DIR / "resume_model.pkl"
